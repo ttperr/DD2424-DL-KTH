@@ -5,7 +5,9 @@
 ############################################
 
 ###### Utils ######
+import os
 import numpy as np
+import matplotlib.pyplot as plt
 np.random.seed(42)
 
 
@@ -34,6 +36,7 @@ def montage(W):
             ax[i][j].set_title("y="+str(5*i+j))
             ax[i][j].axis('off')
     plt.show()
+    return fig
 
 
 def softmax(x):
@@ -260,3 +263,75 @@ print("Relative error grad_W_slow:",
       compute_relative_error(grad_W, grad_W_num_slow))
 print("Relative error grad_b_slow:",
       compute_relative_error(grad_b, grad_b_num_slow))
+
+# 1.8: Implement the mini-batch gradient descent algorithm
+
+
+def mini_batch_gd(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0, n_batch=100, n_epochs=20, eta=.001, eta_decay=1, verbose=True):
+    """ Implement the mini-batch gradient descent algorithm """
+    n = X_train.shape[1]
+    costs_train = []
+    costs_val = []
+    accuracies_train = []
+    accuracies_val = []
+    for epoch in range(n_epochs):
+        for j in range(0, n, n_batch):
+            j_end = min(j + n_batch, n)
+            X_batch = X_train[:, j:j_end]
+            Y_batch = Y_train[:, j:j_end]
+            P_batch = evaluate_classifier(X_batch, W, b)
+            grad_W, grad_b = compute_gradients(
+                X_batch, Y_batch, P_batch, W, b, lmbda)
+            W -= eta * grad_W
+            b -= eta * grad_b
+        eta *= eta_decay
+        costs_train.append(compute_cost(X_train, Y_train, W, b, lmbda))
+        costs_val.append(compute_cost(X_val, Y_val, W, b, lmbda))
+        accuracies_train.append(compute_accuracy(X_train, y_train, W, b))
+        accuracies_val.append(compute_accuracy(X_val, y_val, W, b))
+        if verbose:
+            print(f"Epoch {epoch+1}/{n_epochs}: Cost train: {costs_train[-1]:.4f}, Cost val: {
+                  costs_val[-1]:.4f}, Accuracy train: {accuracies_train[-1]:.4f}, Accuracy val: {accuracies_val[-1]:.4f}")
+    return W, b, costs_train, costs_val, accuracies_train, accuracies_val
+
+# 1.9: Train the network
+
+
+W, b = initialize_parameters(Y_train.shape[0], X_train.shape[0])
+W, b, costs_train, costs_val, accuracies_train, accuracies_val = mini_batch_gd(
+    X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0.01, n_batch=100, n_epochs=40, eta=.001, eta_decay=0.9)
+print("\n1.9: Trained the network")
+
+# 1.10: Plot the cost function and accuracy
+
+os.makedirs('Result_Pics', exist_ok=True)
+plt.figure()
+plt.plot(costs_train, label='Training')
+plt.plot(costs_val, label='Validation')
+plt.title('Cost function')
+plt.xlabel('Epoch')
+plt.ylabel('Cost')
+plt.legend()
+plt.savefig('Result_Pics/cost_function.png')
+plt.figure()
+plt.plot(accuracies_train, label='Training')
+plt.plot(accuracies_val, label='Validation')
+plt.title('Accuracy')
+plt.xlabel('Epoch')
+plt.ylabel('Accuracy')
+plt.legend()
+plt.savefig('Result_Pics/accuracy.png')
+plt.show()
+
+# 1.11: Compute the accuracy on the test set
+
+accuracy_test = compute_accuracy(X_test, y_test, W, b)
+print("\n1.11: Computed the accuracy on the test set")
+print("Accuracy test:", accuracy_test)
+
+# 1.12: Visualize the weights
+
+fig = montage(W)
+fig.savefig('Result_Pics/weights.png')
+plt.show()
+print("\n1.12: Visualized the weights")
