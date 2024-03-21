@@ -183,6 +183,25 @@ X_train, Y_train, y_train, X_val, Y_val, y_val, X_test, Y_test, y_test = read_da
 print("1.1: Read and stored the training data")
 print("X.shape:", X.shape, "; Y.shape:", Y.shape, "; y.shape:", y.shape)
 
+
+# Display one image per label
+def display_images(X, y):
+    fig, ax = plt.subplots(2, 5)
+    fig.suptitle("Labels and images associated")
+    for i in range(2):
+        for j in range(5):
+            im = X[:, y == 5 * i + j][:, 0] \
+                .reshape(3, 32, 32).transpose(1, 2, 0)
+            ax[i][j].imshow(im)
+            ax[i][j].set_title("y=" + str(5 * i + j))
+            ax[i][j].axis('off')
+    plt.tight_layout()
+    plt.savefig('Result_Pics/labels_images.png')
+    plt.show()
+
+
+display_images(X, y)
+
 # 1.2: Compute the mean and standard deviation vector for the training data and then normalize the training, validation and test data w.r.t. these mean and standard deviation vectors
 mean_X = np.mean(X_train, axis=1).reshape(-1, 1)
 std_X = np.std(X_train, axis=1).reshape(-1, 1)
@@ -337,42 +356,42 @@ def mini_batch_gd(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0.
 
 # 1.9: Train the network
 
-
+lmbda = 1
+n_epochs = 40
+n_batch = 100
+eta = 0.001
 W, b = initialize_parameters(Y_train.shape[0], X_train.shape[0])
 W, b, costs_train, costs_val, losses_train, losses_val, accuracies_train, accuracies_val = mini_batch_gd(
-    X_train, Y_train, y_train, X_val, Y_val, y_val, W, b)
+    X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=lmbda, n_batch=n_batch, n_epochs=n_epochs, eta=eta, verbose=True)
 print("\n1.9: Trained the network")
 
 # 1.10: Plot the cost function and accuracy
 
 os.makedirs('Result_Pics', exist_ok=True)
-# Cost function
-plt.figure()
-plt.plot(costs_train, label='Training')
-plt.plot(costs_val, label='Validation')
-plt.title('Cost function')
-plt.xlabel('Epoch')
-plt.ylabel('Cost')
-plt.legend()
-plt.savefig('Result_Pics/cost_function.png')
-# Loss function
-plt.figure()
-plt.plot(losses_train, label='Training')
-plt.plot(losses_val, label='Validation')
-plt.title('Loss function')
-plt.xlabel('Epoch')
-plt.ylabel('Loss')
-plt.legend()
-plt.savefig('Result_Pics/loss_function.png')
-# Accuracy
-plt.figure()
-plt.plot(accuracies_train, label='Training')
-plt.plot(accuracies_val, label='Validation')
-plt.title('Accuracy')
-plt.xlabel('Epoch')
-plt.ylabel('Accuracy')
-plt.legend()
-plt.savefig('Result_Pics/accuracy.png')
+
+fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+fig.suptitle("Cost, loss and accuracy")
+ax[0].plot(costs_train, label='Training set')
+ax[0].plot(costs_val, label='Validation set')
+ax[0].set_title("Cost function")
+ax[0].set_xlabel("Epoch")
+ax[0].set_ylabel("Cost")
+ax[0].legend()
+ax[1].plot(losses_train, label='Training set')
+ax[1].plot(losses_val, label='Validation set')
+ax[1].set_title("Loss function")
+ax[1].set_xlabel("Epoch")
+ax[1].set_ylabel("Loss")
+ax[1].legend()
+ax[2].plot(accuracies_train, label='Training set')
+ax[2].plot(accuracies_val, label='Validation set')
+ax[2].set_title("Accuracy")
+ax[2].set_xlabel("Epoch")
+ax[2].set_ylabel("Accuracy")
+ax[2].legend()
+fig.tight_layout()
+fig.savefig(
+    f'Result_Pics/cost_loss_accuracy_{lmbda}_{n_epochs}_{n_batch}_{eta}.png')
 plt.show()
 
 # 1.11: Compute the accuracy on the test set
@@ -384,6 +403,7 @@ print("Accuracy test:", accuracy_test)
 # 1.12: Visualize the weights
 
 fig = montage(W)
-fig.savefig('Result_Pics/weights.png')
+fig.tight_layout()
+fig.savefig(f'Result_Pics/weights_{lmbda}_{n_epochs}_{n_batch}_{eta}.png')
 plt.show()
 print("\n1.12: Visualized the weights")
