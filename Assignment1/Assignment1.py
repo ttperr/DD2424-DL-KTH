@@ -5,6 +5,8 @@
 ############################################
 
 ###### Utils ######
+import tarfile
+import urllib.request
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -105,6 +107,19 @@ def compute_grads_num_slow(X, Y, P, W, b, lmbda, h):
 
 
 ###### Main ######
+
+
+# # Download the CIFAR-10 dataset
+# url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
+# filename = "cifar-10-python.tar.gz"
+# urllib.request.urlretrieve(url, filename)
+
+# # Extract the files
+# with tarfile.open(filename, 'r:gz') as tar:
+#     tar.extractall(DATASET_PATH)
+#     os.move(DATASET_PATH + 'cifar-10-batches-py', DATASET_PATH)
+
+
 # Load the data
 # data = load_batch('data_batch_1')
 # montage(data[b'data'])
@@ -216,6 +231,14 @@ def compute_cost(X, Y, W, b, lmbda):
     return np.sum(cross_entropy) / n + lmbda * np.sum(W ** 2)
 
 
+def compute_loss(X, Y, W, b):
+    """ Compute the loss function """
+    n = X.shape[1]
+    P = evaluate_classifier(X, W, b)
+    cross_entropy = -np.log(np.sum(Y * P, axis=0))
+    return np.sum(cross_entropy) / n
+
+
 # 1.6: Compute the accuracy
 
 
@@ -275,19 +298,25 @@ print("Relative error grad_b_slow:",
 # 1.8: Implement the mini-batch gradient descent algorithm
 
 
-def mini_batch_gd(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0., n_batch=100, n_epochs=20, eta=.001,
+def mini_batch_gd(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0., n_batch=100, n_epochs=40, eta=.001,
                   eta_decay=1., verbose=True):
     """ Implement the mini-batch gradient descent algorithm """
     n = X_train.shape[1]
     costs_train = []
     costs_val = []
+    losses_train = []
+    losses_val = []
     accuracies_train = []
     accuracies_val = []
     for epoch in range(n_epochs):
+        # Shuffle the data
+        indices = np.random.permutation(n)
+        X_train_shuffled = X_train[:, indices]
+        Y_train_shuffled = Y_train[:, indices]
         for j in range(0, n, n_batch):
             j_end = min(j + n_batch, n)
-            X_batch = X_train[:, j:j_end]
-            Y_batch = Y_train[:, j:j_end]
+            X_batch = X_train_shuffled[:, j:j_end]
+            Y_batch = Y_train_shuffled[:, j:j_end]
             P_batch = evaluate_classifier(X_batch, W, b)
             grad_W, grad_b = compute_gradients(
                 X_batch, Y_batch, P_batch, W, b, lmbda)
@@ -296,25 +325,28 @@ def mini_batch_gd(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0.
         eta *= eta_decay
         costs_train.append(compute_cost(X_train, Y_train, W, b, lmbda))
         costs_val.append(compute_cost(X_val, Y_val, W, b, lmbda))
+        losses_train.append(compute_loss(X_train, Y_train, W, b))
+        losses_val.append(compute_loss(X_val, Y_val, W, b))
         accuracies_train.append(compute_accuracy(X_train, y_train, W, b))
         accuracies_val.append(compute_accuracy(X_val, y_val, W, b))
         if verbose:
             print(f"Epoch {epoch + 1}/{n_epochs}: Cost train: {costs_train[-1]:.4f}, Cost val: {
-            costs_val[-1]:.4f}, Accuracy train: {accuracies_train[-1]:.4f}, Accuracy val: {accuracies_val[-1]:.4f}")
-    return W, b, costs_train, costs_val, accuracies_train, accuracies_val
+                costs_val[-1]:.4f}, Accuracy train: {accuracies_train[-1]:.4f}, Accuracy val: {accuracies_val[-1]:.4f}")
+    return W, b, costs_train, costs_val, losses_train, losses_val, accuracies_train, accuracies_val
 
 
 # 1.9: Train the network
 
 
 W, b = initialize_parameters(Y_train.shape[0], X_train.shape[0])
-W, b, costs_train, costs_val, accuracies_train, accuracies_val = mini_batch_gd(
-    X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0.01, n_batch=100, n_epochs=40, eta=.001, eta_decay=0.9)
+W, b, costs_train, costs_val, losses_train, losses_val, accuracies_train, accuracies_val = mini_batch_gd(
+    X_train, Y_train, y_train, X_val, Y_val, y_val, W, b)
 print("\n1.9: Trained the network")
 
 # 1.10: Plot the cost function and accuracy
 
 os.makedirs('Result_Pics', exist_ok=True)
+# Cost function
 plt.figure()
 plt.plot(costs_train, label='Training')
 plt.plot(costs_val, label='Validation')
@@ -323,6 +355,16 @@ plt.xlabel('Epoch')
 plt.ylabel('Cost')
 plt.legend()
 plt.savefig('Result_Pics/cost_function.png')
+# Loss function
+plt.figure()
+plt.plot(losses_train, label='Training')
+plt.plot(losses_val, label='Validation')
+plt.title('Loss function')
+plt.xlabel('Epoch')
+plt.ylabel('Loss')
+plt.legend()
+plt.savefig('Result_Pics/loss_function.png')
+# Accuracy
 plt.figure()
 plt.plot(accuracies_train, label='Training')
 plt.plot(accuracies_val, label='Validation')
