@@ -37,7 +37,6 @@ def montage(W):
             ax[i][j].imshow(sim, interpolation='nearest')
             ax[i][j].set_title("y=" + str(5 * i + j))
             ax[i][j].axis('off')
-    plt.show()
     return fig
 
 
@@ -197,7 +196,6 @@ def display_images(X, y):
             ax[i][j].axis('off')
     plt.tight_layout()
     plt.savefig('Result_Pics/labels_images.png')
-    plt.show()
 
 
 display_images(X, y)
@@ -356,54 +354,252 @@ def mini_batch_gd(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0.
 
 # 1.9: Train the network
 
-lmbda = 1
+
+def train_and_plot(X_train, Y_train, y_train, X_val, Y_val, y_val, X_test, y_test, sup_title="", save=True, verbose=True, lmbda=0.1, n_batch=100, n_epochs=40, eta=.001):
+    W, b = initialize_parameters(Y_train.shape[0], X_train.shape[0])
+    W, b, costs_train, costs_val, losses_train, losses_val, accuracies_train, accuracies_val = mini_batch_gd(
+        X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=lmbda, n_batch=n_batch, n_epochs=n_epochs, eta=eta, verbose=verbose)
+    print("\n1.9: Trained the network")
+
+    # 1.11: Compute the accuracy on the test set
+
+    accuracy_test = compute_accuracy(X_test, y_test, W, b)
+    print("\n1.11: Computed the accuracy on the test set")
+    print("Accuracy test:", accuracy_test)
+
+    # 1.10: Plot the cost function and accuracy
+
+    os.makedirs('Result_Pics', exist_ok=True)
+    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+    fig.suptitle(
+        "Cost, loss and accuracy, final accuracy test: " + str(accuracy_test * 100) + "%")
+    ax[0].plot(costs_train, label='Training set')
+    ax[0].plot(costs_val, label='Validation set')
+    ax[0].set_title("Cost function")
+    ax[0].set_xlabel("Epoch")
+    ax[0].set_ylabel("Cost")
+    ax[0].legend()
+    ax[1].plot(losses_train, label='Training set')
+    ax[1].plot(losses_val, label='Validation set')
+    ax[1].set_title("Loss function")
+    ax[1].set_xlabel("Epoch")
+    ax[1].set_ylabel("Loss")
+    ax[1].legend()
+    ax[2].plot(accuracies_train, label='Training set')
+    ax[2].plot(accuracies_val, label='Validation set')
+    ax[2].set_title("Accuracy")
+    ax[2].set_xlabel("Epoch")
+    ax[2].set_ylabel("Accuracy")
+    ax[2].legend()
+    fig.tight_layout()
+    if save:
+        fig.savefig(
+            f'Result_Pics/cost_loss_accuracy{sup_title}.png')
+
+    # 1.12: Visualize the weights
+
+    fig = montage(W)
+    fig.tight_layout()
+    if save:
+        fig.savefig(
+            f'Result_Pics/weights{sup_title}.png')
+    print("\n1.12: Visualized the weights")
+
+    return accuracy_test
+
+
+# lmbda_list = [0.0, 0.0, 0.1, 1]
+# n_epochs_list = [40, 40, 40, 40]
+# n_batch_list = [100, 100, 100, 100]
+# eta_list = [.1, .001, .001, .001]
+
+# for i in range(4):
+#     lmbda = lmbda_list[i]
+#     n_epochs = n_epochs_list[i]
+#     n_batch = n_batch_list[i]
+#     eta = eta_list[i]
+#     train_and_plot(X_train, Y_train, y_train, X_val, Y_val,
+#                    y_val, X_test, y_test, lmbda=lmbda, n_batch=n_batch, n_epochs=n_epochs, eta=eta, verbose=verbose, f"_{lmbda}_{n_epochs}_{n_batch}_{eta}")
+
+# a) Increase the size of the training set
+
+
+def load_all_data():
+    """ Load all the data """
+    X, Y, y = load_data('data_batch_1')
+    for i in range(2, 6):
+        X_i, Y_i, y_i = load_data(f'data_batch_{i}')
+        X = np.concatenate((X, X_i), axis=1)
+        Y = np.concatenate((Y, Y_i), axis=1)
+        y = np.concatenate((y, y_i))
+    X_test, Y_test, y_test = load_data('test_batch')
+    return X, Y, y, X_test, Y_test, y_test
+
+
+X, Y, y, X_test, Y_test, y_test = load_all_data()
+X_train, Y_train, y_train, X_val, Y_val, y_val = split_data(
+    X, Y, y, 1000/X.shape[1])
+print("\nLoaded all the data")
+print("X._train.shape:", X_train.shape, "; Y_train.shape:",
+      Y_train.shape, "; y_train.shape:", y_train.shape)
+print("X_val.shape:", X_val.shape, "; Y_val.shape:",
+      Y_val.shape, "; y_val.shape:", y_val.shape)
+print("X_test.shape:", X_test.shape, "; Y_test.shape:",
+      Y_test.shape, "; y_test.shape:", y_test.shape)
+
+# Normalize the data
+mean_X = np.mean(X_train, axis=1).reshape(-1, 1)
+std_X = np.std(X_train, axis=1).reshape(-1, 1)
+X_train = (X_train - mean_X) / std_X
+X_val = (X_val - mean_X) / std_X
+X_test = (X_test - mean_X) / std_X
+print("\nNormalized the data")
+
+# Let's do a grid search to find the best hyperparameters
+# lmbda_list = [0.1, 0.2, 0.5]
+# n_epochs_list = [40, 80, 100, 120]
+# n_batch_list = [100, 200, 500, 1000, 2000]
+# eta_list = [.01, 0.005, .001]
+
+# best_accuracy = 0
+# best_hyperparameters = None
+# for lmbda in lmbda_list:
+#     for n_epochs in n_epochs_list:
+#         for n_batch in n_batch_list:
+#             for eta in eta_list:
+#                 accuracy = train_and_plot(X_train, Y_train, y_train, X_val, Y_val,
+#                                           y_val, X_test, y_test, lmbda=lmbda, n_batch=n_batch, n_epochs=n_epochs, eta=eta, sup_title=f"_{lmbda}_{n_epochs}_{n_batch}_{eta}", save=False, verbose=False)
+#                 print(f"\nHyperparameters: lmbda={lmbda}, n_epochs={
+#                       n_epochs}, n_batch={n_batch}, eta={eta}, accuracy={accuracy}")
+#                 if accuracy > best_accuracy:
+#                     best_accuracy = accuracy
+#                     best_hyperparameters = (lmbda, n_epochs, n_batch, eta)
+# print("\nBest hyperparameters:", best_hyperparameters)
+# print("Best accuracy:", best_accuracy)
+
+# lmbda, n_epochs, n_batch, eta = best_hyperparameters
+# train_and_plot(X_train, Y_train, y_train, X_val, Y_val,
+#                y_val, X_test, y_test, f"_all_data_grid_searched_{lmbda}_{n_epochs}_{n_batch}_{eta}")
+
+lmbda = 0.1
 n_epochs = 40
 n_batch = 100
 eta = 0.001
-W, b = initialize_parameters(Y_train.shape[0], X_train.shape[0])
-W, b, costs_train, costs_val, losses_train, losses_val, accuracies_train, accuracies_val = mini_batch_gd(
-    X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=lmbda, n_batch=n_batch, n_epochs=n_epochs, eta=eta, verbose=True)
-print("\n1.9: Trained the network")
+# train_and_plot(X_train, Y_train, y_train, X_val, Y_val,
+#                y_val, X_test, y_test, f"_all_data_previous_{lmbda}_{n_epochs}_{n_batch}_{eta}")
 
-# 1.10: Plot the cost function and accuracy
 
-os.makedirs('Result_Pics', exist_ok=True)
+def mini_batch_gd_step_decay(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0., n_batch=100, n_epochs=40, eta=.001,
+                             eta_decay=1., verbose=True):
+    """ Implement the mini-batch gradient descent algorithm """
+    n = X_train.shape[1]
+    costs_train = []
+    costs_val = []
+    losses_train = []
+    losses_val = []
+    accuracies_train = []
+    accuracies_val = []
+    for epoch in range(n_epochs):
+        # Shuffle the data
+        indices = np.random.permutation(n)
+        X_train_shuffled = X_train[:, indices]
+        Y_train_shuffled = Y_train[:, indices]
+        for j in range(0, n, n_batch):
+            j_end = min(j + n_batch, n)
+            X_batch = X_train_shuffled[:, j:j_end]
+            Y_batch = Y_train_shuffled[:, j:j_end]
+            P_batch = evaluate_classifier(X_batch, W, b)
+            grad_W, grad_b = compute_gradients(
+                X_batch, Y_batch, P_batch, W, b, lmbda)
+            W -= eta * grad_W
+            b -= eta * grad_b
+        eta *= eta_decay
+        costs_train.append(compute_cost(X_train, Y_train, W, b, lmbda))
+        costs_val.append(compute_cost(X_val, Y_val, W, b, lmbda))
+        losses_train.append(compute_loss(X_train, Y_train, W, b))
+        losses_val.append(compute_loss(X_val, Y_val, W, b))
+        accuracies_train.append(compute_accuracy(X_train, y_train, W, b))
+        accuracies_val.append(compute_accuracy(X_val, y_val, W, b))
+        if verbose:
+            print(f"Epoch {epoch + 1}/{n_epochs}: Cost train: {costs_train[-1]:.4f}, Cost val: {
+                costs_val[-1]:.4f}, Accuracy train: {accuracies_train[-1]:.4f}, Accuracy val: {accuracies_val[-1]:.4f}")
+        # If the validation seems to plateau, decaying the learning rate by 10
+        if len(costs_val) > 1 and costs_val[-1] > costs_val[-2]:
+            eta *= 0.1
+    return W, b, costs_train, costs_val, losses_train, losses_val, accuracies_train, accuracies_val
 
-fig, ax = plt.subplots(1, 3, figsize=(15, 5))
-fig.suptitle("Cost, loss and accuracy")
-ax[0].plot(costs_train, label='Training set')
-ax[0].plot(costs_val, label='Validation set')
-ax[0].set_title("Cost function")
-ax[0].set_xlabel("Epoch")
-ax[0].set_ylabel("Cost")
-ax[0].legend()
-ax[1].plot(losses_train, label='Training set')
-ax[1].plot(losses_val, label='Validation set')
-ax[1].set_title("Loss function")
-ax[1].set_xlabel("Epoch")
-ax[1].set_ylabel("Loss")
-ax[1].legend()
-ax[2].plot(accuracies_train, label='Training set')
-ax[2].plot(accuracies_val, label='Validation set')
-ax[2].set_title("Accuracy")
-ax[2].set_xlabel("Epoch")
-ax[2].set_ylabel("Accuracy")
-ax[2].legend()
-fig.tight_layout()
-fig.savefig(
-    f'Result_Pics/cost_loss_accuracy_{lmbda}_{n_epochs}_{n_batch}_{eta}.png')
-plt.show()
 
-# 1.11: Compute the accuracy on the test set
+def train_and_plot_with_step_decay(X_train, Y_train, y_train, X_val, Y_val, y_val, X_test, y_test, sup_title="", save=True, verbose=True, lmbda=0.1, n_batch=100, n_epochs=40, eta=.001):
+    W, b = initialize_parameters(Y_train.shape[0], X_train.shape[0])
+    W, b, costs_train, costs_val, losses_train, losses_val, accuracies_train, accuracies_val = mini_batch_gd_step_decay(
+        X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=lmbda, n_batch=n_batch, n_epochs=n_epochs, eta=eta, verbose=verbose)
+    print("\n1.9: Trained the network")
 
-accuracy_test = compute_accuracy(X_test, y_test, W, b)
-print("\n1.11: Computed the accuracy on the test set")
-print("Accuracy test:", accuracy_test)
+    # 1.11: Compute the accuracy on the test set
 
-# 1.12: Visualize the weights
+    accuracy_test = compute_accuracy(X_test, y_test, W, b)
+    print("\n1.11: Computed the accuracy on the test set")
+    print("Accuracy test:", accuracy_test)
 
-fig = montage(W)
-fig.tight_layout()
-fig.savefig(f'Result_Pics/weights_{lmbda}_{n_epochs}_{n_batch}_{eta}.png')
-plt.show()
-print("\n1.12: Visualized the weights")
+    # 1.10: Plot the cost function and accuracy
+
+    os.makedirs('Result_Pics', exist_ok=True)
+    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+    fig.suptitle(
+        "Cost, loss and accuracy, final accuracy test: " + str(accuracy_test * 100) + "%")
+    ax[0].plot(costs_train, label='Training set')
+    ax[0].plot(costs_val, label='Validation set')
+    ax[0].set_title("Cost function")
+    ax[0].set_xlabel("Epoch")
+    ax[0].set_ylabel("Cost")
+    ax[0].legend()
+    ax[1].plot(losses_train, label='Training set')
+    ax[1].plot(losses_val, label='Validation set')
+    ax[1].set_title("Loss function")
+    ax[1].set_xlabel("Epoch")
+    ax[1].set_ylabel("Loss")
+    ax[1].legend()
+    ax[2].plot(accuracies_train, label='Training set')
+    ax[2].plot(accuracies_val, label='Validation set')
+    ax[2].set_title("Accuracy")
+    ax[2].set_xlabel("Epoch")
+    ax[2].set_ylabel("Accuracy")
+    ax[2].legend()
+    fig.tight_layout()
+    if save:
+        fig.savefig(
+            f'Result_Pics/cost_loss_accuracy{sup_title}.png')
+
+    # 1.12: Visualize the weights
+
+    fig = montage(W)
+    fig.tight_layout()
+    if save:
+        fig.savefig(
+            f'Result_Pics/weights{sup_title}.png')
+    print("\n1.12: Visualized the weights")
+
+    return accuracy_test
+
+
+# Reuse of only 1 batch of data
+X, Y, y = load_data('data_batch_1')
+X_test, Y_test, y_test = load_data('test_batch')
+X_train, Y_train, y_train, X_val, Y_val, y_val = split_data(X, Y, y)
+
+# Normalize the data
+mean_X = np.mean(X_train, axis=1).reshape(-1, 1)
+std_X = np.std(X_train, axis=1).reshape(-1, 1)
+X_train = (X_train - mean_X) / std_X
+X_val = (X_val - mean_X) / std_X
+X_test = (X_test - mean_X) / std_X
+print("\nNormalized the data")
+
+# Best hyperparameters on batch 1 with more epochs
+lmbda = 0.1
+n_epochs = 100
+n_batch = 100
+eta = 0.1
+
+# train_and_plot_with_step_decay(X_train, Y_train, y_train, X_val, Y_val,
+#                                y_val, X_test, y_test, f"_step_decay_{lmbda}_{n_epochs}_{n_batch}_{eta}")
