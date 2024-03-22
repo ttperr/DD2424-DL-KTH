@@ -62,26 +62,3 @@ Now the test accuracy is decreasing because the **regularization** is too high. 
 To conclude, the best model is the one with `lambda=0, n_epochs=40, n_batch=100, eta=.001`.
 The importance of the **learning rate** is crucial, if it is too high the model will not be able to learn, if it is too low the model will take too much time to learn or never learn.
 The **regularization** is also important, it helps to generalize the model and to avoid overfitting. If the regularization is too high, the model will not be able to learn, if it is too low the model will maybe overfit. The regularization make also the training and validation costs closer.
-
-## Exercise 2 - Optional for Bonus Points
-
-The goal now is to improve the model by adding some techniques.
-
-At first, I retrieve all the data and I normalize it after that I split it into a training, validation and test set. I also implement a grid search to see which parameters are the best for the model.
-This is the best result I obtained:
-
-- With old hyperparameters: `lambda=0.1, n_epochs=40, n_batch=100, eta=.001`
-![Cost, loss and Accuracy, All Data](Result_Pics/cost_loss_accuracy_all_data_previous_0.1_40_100_0.001.png)
-
-- With best hyperparameters: `lambda=0.5, n_epochs=80, n_batch=100, eta=.001`
-![Cost, loss and Accuracy, All Data, Grid Searched](Result_Pics/cost_loss_accuracy_all_data_grid_searched_0.5_80_100_0.001.png)
-
-Unfortunately, we see here not much improvement by selecting all the data! Indeed, it's important to have in mind that we try to classify RGB images with a single layer network ! The capacity to memorize and well classify images for a single layer neural network is not enough. A more complex model is needed to have better results, like a convolutional neural network.
-However, the grid search is a good way to find the best hyperparameters for the model, it's just a bit long to compute.
-
-After that, I implement the **step decay** and I only used the one batch that we used before. I re used the best parameters but with more epochs to see if the step decay is helping. I obtained the following results:
-
-- With `lambda=0.1, n_epochs=1000, n_batch=100, eta=.1`
-![Cost, loss and Accuracy, Step Decay](Result_Pics/cost_loss_accuracy_step_decay_0.1_100_100_0.1.png)
-
-Unfortunately, the step decay is not helping, the cost is not decreasing and the accuracy is not increasing compared to the best previous model.
