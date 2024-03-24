@@ -30,7 +30,7 @@ Unfortunately, the step decay is not helping so much. But the accuracy is not os
 
 ## Train network - multiple binary cross-entropy losses
 
-After that, I implement the **multiple binary cross-entropy losses** with **sigmoid** activation function.
+After that, I implement the **multiple binary cross-entropy losses** with **sigmoid** activation function on all the dataset.
 $$
 \sigma(s) = \frac{1}{1+e^{-s}} \\
 l_{multiple\ bce} = -\frac{1}{K}\sum_{i=1}^{K} y_i \log(\hat{y}_i) + (1-y_i) \log(1-\hat{y}_i) \\
@@ -43,7 +43,7 @@ $$
 \frac{\partial  l_{multiple\ bce}}{\partial b} = \frac{1}{K} \sum_{i=1}^{K} (\hat{y}_i - y_i)
 $$
 
-And this is the result I obtained with the hyperparameters: `lambda=0.1, n_epochs=50, n_batch=100, eta=.0001`:
+And this is the result I obtained with the hyperparameters: `n_batch=200, n_epochs=50, eta=.001`:
 ![Histograms Train](Result_Pics/histogram_train.png)
 ![Histograms Validation](Result_Pics/histogram_val.png)
 ![Histograms Test](Result_Pics/histogram_test.png)
