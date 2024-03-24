@@ -48,4 +48,4 @@ And this is the result I obtained with the hyperparameters: `n_batch=200, n_epoc
 ![Histograms Validation](Result_Pics/histogram_val.png)
 ![Histograms Test](Result_Pics/histogram_test.png)
 
-Here we have not a huge improvement on the accuracy compared to the previous model. The model is not overfitting but we could have a better accuracy by using a more complex model, more adapted to the problem.
+Here we don't have an improvement because the test accuracy is **37.33%**. However, the model is not overfitting. The model is still not adapted to the problem. We need a more complex model to have a better accuracy.
