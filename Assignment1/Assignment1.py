@@ -1,19 +1,34 @@
-############################################
-# Assignment 1                             #
-# Tristan PERROT                           #
-# March 2024                               #
-############################################
+#!/usr/bin/env python
+# coding: utf-8
 
-###### Utils ######
+# # Assignment 1
+# 
+# > Tristan PERROT
+# 
+# ## Utils
+# 
+# ### Librairies
+# 
+
+# In[89]:
+
+
 import tarfile
 import urllib.request
 import os
+import shutil
 import numpy as np
 import matplotlib.pyplot as plt
 
 np.random.seed(42)
 
-DATASET_PATH = 'Dataset/'
+DATASET_PATH = '../Dataset/'
+
+
+# ### Functions
+# 
+
+# In[90]:
 
 
 def load_batch(filename):
@@ -35,7 +50,6 @@ def montage(W):
             sim = (im - np.min(im[:])) / (np.max(im[:]) - np.min(im[:]))
             sim = sim.transpose(1, 0, 2)
             ax[i][j].imshow(sim, interpolation='nearest')
-            ax[i][j].set_title("y=" + str(5 * i + j))
             ax[i][j].axis('off')
     return fig
 
@@ -105,26 +119,43 @@ def compute_grads_num_slow(X, Y, P, W, b, lmbda, h):
     return [grad_W, grad_b]
 
 
-###### Main ######
+# ## Exercices
+# 
+# ### Exercice 1
+# 
+
+# In[ ]:
 
 
-# # Download the CIFAR-10 dataset
-# url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
-# filename = "cifar-10-python.tar.gz"
-# urllib.request.urlretrieve(url, filename)
-
-# # Extract the files
-# with tarfile.open(filename, 'r:gz') as tar:
-#     tar.extractall(DATASET_PATH)
-#     os.move(DATASET_PATH + 'cifar-10-batches-py', DATASET_PATH)
+# Download the CIFAR-10 dataset
+url = "https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz"
+filename = "cifar-10-python.tar.gz"
+urllib.request.urlretrieve(url, filename)
 
 
-# Load the data
-# data = load_batch('data_batch_1')
-# montage(data[b'data'])
+# In[ ]:
 
-# Exercise 1: Training a multi-linear classifier
-# 1.1: Read in and store the training, validation and test data.
+
+with tarfile.open(filename, 'r:gz') as tar:
+    tar.extractall()
+
+os.rename('cifar-10-batches-py', DATASET_PATH)
+os.remove(filename)
+
+
+# In[91]:
+
+
+# Load the data and see the images
+data = load_batch('data_batch_1')
+montage(data[b'data'])
+plt.show()
+
+
+# #### 1.1: Read in and store the training, validation and test data.
+# 
+
+# In[92]:
 
 
 def load_data(filename):
@@ -172,6 +203,9 @@ def read_data(filename):
     return X_train, Y_train, y_train, X_val, Y_val, y_val, X_test, Y_test, y_test
 
 
+# In[93]:
+
+
 X, Y, y = load_data('data_batch_1')
 X_test, Y_test, y_test = load_data('test_batch')
 X_train, Y_train, y_train, X_val, Y_val, y_val = split_data(X, Y, y)
@@ -181,6 +215,9 @@ X_train, Y_train, y_train, X_val, Y_val, y_val, X_test, Y_test, y_test = read_da
     'data_batch_1')
 print("1.1: Read and stored the training data")
 print("X.shape:", X.shape, "; Y.shape:", Y.shape, "; y.shape:", y.shape)
+
+
+# In[94]:
 
 
 # Display one image per label
@@ -196,20 +233,42 @@ def display_images(X, y):
             ax[i][j].axis('off')
     plt.tight_layout()
     plt.savefig('Result_Pics/labels_images.png')
+    return fig
+
+
+# In[95]:
 
 
 display_images(X, y)
-
-# 1.2: Compute the mean and standard deviation vector for the training data and then normalize the training, validation and test data w.r.t. these mean and standard deviation vectors
-mean_X = np.mean(X_train, axis=1).reshape(-1, 1)
-std_X = np.std(X_train, axis=1).reshape(-1, 1)
-X_train = (X_train - mean_X) / std_X
-X_val = (X_val - mean_X) / std_X
-X_test = (X_test - mean_X) / std_X
-print("\n1.2: Normalized the data")
+plt.show()
 
 
-# 1.3: Initialize the parameters
+# #### 1.2: Compute the mean and standard deviation vector for the training data and then normalize the training, validation and test data w.r.t. these mean and standard deviation vectors.
+# 
+
+# In[96]:
+
+
+def mean_std_normalization(X_train, X_val, X_test):
+    """ Normalize the data """
+    mean_X = np.mean(X_train, axis=1).reshape(-1, 1)
+    std_X = np.std(X_train, axis=1).reshape(-1, 1)
+    X_train = (X_train - mean_X) / std_X
+    X_val = (X_val - mean_X) / std_X
+    X_test = (X_test - mean_X) / std_X
+    return X_train, X_val, X_test
+
+
+# In[97]:
+
+
+X_train, X_val, X_test = mean_std_normalization(X_train, X_val, X_test)
+
+
+# #### 1.3: Initialize the parameters
+# 
+
+# In[98]:
 
 
 def initialize_parameters(K, d):
@@ -219,12 +278,18 @@ def initialize_parameters(K, d):
     return W, b
 
 
+# In[99]:
+
+
 W, b = initialize_parameters(Y_train.shape[0], X_train.shape[0])
-print("\n1.3: Initialized the parameters")
+print("1.3: Initialized the parameters")
 print("W.shape:", W.shape, "; b.shape:", b.shape)
 
 
-# 1.4: Evaluate network function
+# #### 1.4: Evaluate network function
+# 
+
+# In[100]:
 
 
 def evaluate_classifier(X, W, b):
@@ -232,12 +297,18 @@ def evaluate_classifier(X, W, b):
     return softmax(W @ X + b)
 
 
+# In[101]:
+
+
 P = evaluate_classifier(X_train[:, :20], W, b)
-print("\n1.4: Evaluated the network function")
+print("1.4: Evaluated the network function")
 print("P.shape:", P.shape)
 
 
-# 1.5: Compute the cost function
+# #### 1.5: Compute the cost function
+# 
+
+# In[102]:
 
 
 def compute_cost(X, Y, W, b, lmbda):
@@ -256,7 +327,10 @@ def compute_loss(X, Y, W, b):
     return np.sum(cross_entropy) / n
 
 
-# 1.6: Compute the accuracy
+# #### 1.6: Compute the accuracy
+# 
+
+# In[103]:
 
 
 def compute_accuracy(X, y, W, b):
@@ -265,10 +339,13 @@ def compute_accuracy(X, y, W, b):
     return np.sum(np.argmax(P, axis=0) == y) / X.shape[1]
 
 
-# 1.7: Compute the gradients of the cost function
+# #### 1.7: Compute the gradients of the cost function
+# 
+
+# In[104]:
 
 
-def compute_gradients(X, Y, P, W, b, lmbda):
+def compute_gradients(X, Y, P, W, lmbda):
     """ Compute the gradients of the cost function """
     n = X.shape[1]
     G = -(Y - P)
@@ -283,21 +360,27 @@ def compute_relative_error(grad_analytical, grad_numerical, eps=1e-9):
         np.abs(grad_analytical - grad_numerical) / np.maximum(eps, np.abs(grad_analytical) + np.abs(grad_numerical)))
 
 
-# Comparing the gradients
+# In[105]:
+
+
 n = 20
 dim = 2
+lmbda = 0
+
 X_train_reduced = X_train[:dim, :n]
 Y_train_reduced = Y_train[:, :n]
 W_reduced = W[:, :dim]
 b_reduced = b
-lmbda = 0
+
 P = evaluate_classifier(X_train_reduced, W_reduced, b_reduced)
+
 grad_W, grad_b = compute_gradients(
-    X_train_reduced, Y_train_reduced, P, W_reduced, b_reduced, lmbda)
+    X_train_reduced, Y_train_reduced, P, W_reduced, lmbda)
 grad_W_num, grad_b_num = compute_grads_num(
     X_train_reduced, Y_train_reduced, P, W_reduced, b_reduced, lmbda, 1e-6)
 grad_W_num_slow, grad_b_num_slow = compute_grads_num_slow(
     X_train_reduced, Y_train_reduced, P, W_reduced, b_reduced, lmbda, 1e-6)
+
 print("\n1.7: Computed the gradients")
 print("grad_W.shape:", grad_W.shape, "; grad_b.shape:", grad_b.shape)
 print("grad_W_num.shape:", grad_W_num.shape,
@@ -312,18 +395,17 @@ print("Relative error grad_b_slow:",
       compute_relative_error(grad_b, grad_b_num_slow))
 
 
-# 1.8: Implement the mini-batch gradient descent algorithm
+# #### 1.8: Implement the mini-batch gradient descent algorithm
+
+# In[106]:
 
 
 def mini_batch_gd(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0., n_batch=100, n_epochs=40, eta=.001, verbose=True):
     """ Implement the mini-batch gradient descent algorithm """
     n = X_train.shape[1]
-    costs_train = []
-    costs_val = []
-    losses_train = []
-    losses_val = []
-    accuracies_train = []
-    accuracies_val = []
+    costs_train, costs_val = [], []
+    losses_train, losses_val = [], []
+    accuracies_train, accuracies_val = [], []
     for epoch in range(n_epochs):
         # Shuffle the data
         indices = np.random.permutation(n)
@@ -335,7 +417,7 @@ def mini_batch_gd(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0.
             Y_batch = Y_train_shuffled[:, j:j_end]
             P_batch = evaluate_classifier(X_batch, W, b)
             grad_W, grad_b = compute_gradients(
-                X_batch, Y_batch, P_batch, W, b, lmbda)
+                X_batch, Y_batch, P_batch, W, lmbda)
             W -= eta * grad_W
             b -= eta * grad_b
         costs_train.append(compute_cost(X_train, Y_train, W, b, lmbda))
@@ -350,27 +432,29 @@ def mini_batch_gd(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=0.
     return W, b, costs_train, costs_val, losses_train, losses_val, accuracies_train, accuracies_val
 
 
-# 1.9: Train the network
+# #### 1.9: Train the network
+
+# In[107]:
 
 
 def train_and_plot(X_train, Y_train, y_train, X_val, Y_val, y_val, X_test, y_test, sup_title="", save=True, verbose=True, lmbda=0.1, n_batch=100, n_epochs=40, eta=.001):
     W, b = initialize_parameters(Y_train.shape[0], X_train.shape[0])
     W, b, costs_train, costs_val, losses_train, losses_val, accuracies_train, accuracies_val = mini_batch_gd(
         X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=lmbda, n_batch=n_batch, n_epochs=n_epochs, eta=eta, verbose=verbose)
-    print("\n1.9: Trained the network")
 
     # 1.11: Compute the accuracy on the test set
 
     accuracy_test = compute_accuracy(X_test, y_test, W, b)
-    print("\n1.11: Computed the accuracy on the test set")
-    print("Accuracy test:", accuracy_test)
+    print("Hyperparameters: lambda=", lmbda, ", n_batch=", n_batch,
+            ", n_epochs=", n_epochs, ", eta=", eta)
+    print("Accuracy test: ", accuracy_test)
 
     # 1.10: Plot the cost function and accuracy
 
     os.makedirs('Result_Pics', exist_ok=True)
     fig, ax = plt.subplots(1, 3, figsize=(15, 5))
-    fig.suptitle(
-        "Cost, loss and accuracy, final accuracy test: " + str(accuracy_test * 100) + "%")
+    fig.suptitle(f"Cost, loss and accuracy, final accuracy test: {
+                 accuracy_test * 100:.2f}%")
     ax[0].plot(costs_train, label='Training set')
     ax[0].plot(costs_val, label='Validation set')
     ax[0].set_title("Cost function")
@@ -401,9 +485,11 @@ def train_and_plot(X_train, Y_train, y_train, X_val, Y_val, y_val, X_test, y_tes
     if save:
         fig.savefig(
             f'Result_Pics/weights{sup_title}.png')
-    print("\n1.12: Visualized the weights")
 
     return accuracy_test
+
+
+# In[108]:
 
 
 lmbda_list = [0.0, 0.0, 0.1, 1]
@@ -417,4 +503,5 @@ for i in range(4):
     n_batch = n_batch_list[i]
     eta = eta_list[i]
     train_and_plot(X_train, Y_train, y_train, X_val, Y_val,
-                   y_val, X_test, y_test, lmbda=lmbda, n_batch=n_batch, n_epochs=n_epochs, eta=eta, verbose=True, sup_title=f"_{lmbda}_{n_epochs}_{n_batch}_{eta}")
+                   y_val, X_test, y_test, lmbda=lmbda, n_batch=n_batch, n_epochs=n_epochs, eta=eta, verbose=False, sup_title=f"_{lmbda}_{n_epochs}_{n_batch}_{eta}")
+

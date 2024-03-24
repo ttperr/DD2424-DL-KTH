@@ -36,26 +36,26 @@ With `lambda=0, n_epochs=40, n_batch=100, eta=.1`:
 ![Montage](Result_Pics/weights_0.0_40_100_0.1.png)
 > Final test accuracy: 28.1%
 
-Here the learning rate is way too high, the cost is not decreasing and the accuracy is not increasing. We can see that the weights are not well distributed.
+Here the learning rate is way too high, the cost is not decreasing and the accuracy is not increasing. They are oscillating and they will not converge. We can see that the weights are not well distributed.
 
 With `lambda=0, n_epochs=40, n_batch=100, eta=.001`:
 ![Cost, loss and Accuracy](Result_Pics/cost_loss_accuracy_0.0_40_100_0.001.png)
 ![Montage](Result_Pics/weights_0.0_40_100_0.001.png)
-> Final test accuracy: 38.53%
+> Final test accuracy: 38.36%
 
-Here we see the **benefit of a lower learning rate**. The cost is decreasing and the accuracy is increasing. The weights are more distributed and we can see some patterns. We also have a better accuracy on the test set.
+Here we see the **benefit of a lower learning rate**. The cost is decreasing and the accuracy is increasing. They are converging. The weights are more distributed and we can see some patterns. We also have a better accuracy on the test set.
 
 With `lambda=.1, n_epochs=40, n_batch=100, eta=.001`:
 ![Cost, loss and Accuracy](Result_Pics/cost_loss_accuracy_0.1_40_100_0.001.png)
 ![Montage](Result_Pics/weights_0.1_40_100_0.001.png)
-> Final test accuracy: 38.9%
+> Final test accuracy: 38.81%
 
-Here we see that the **regularization** is helping a bit. The cost is a bit higher but the accuracy is a bit higher too, it helps to generalize the model, we can see that on the validation set. Moreover, the weights are more distributed and we can see some patterns.
+Here we see that the **regularization** is helping a bit. The cost is a bit higher but the accuracy is a bit higher too, it helps to generalize the model, we can see that on the validation set. Now, the loss is not the same as the cost because there is the regularization term that is not null. Moreover, the weights are more distributed and we can see some patterns.
 
 With `lambda=1, n_epochs=40, n_batch=100, eta=.001`:
 ![Cost, loss and Accuracy](Result_Pics/cost_loss_accuracy_1_40_100_0.001.png)
 ![Montage](Result_Pics/weights_1_40_100_0.001.png)
-> Final test accuracy: 37.28%
+> Final test accuracy: 36.67%
 
 Now the test accuracy is decreasing because the **regularization** is too high. The cost is higher and the training and validation costs are almost the same. The weights are more distributed but the patterns are too clear and the model is not able to generalize.
 
