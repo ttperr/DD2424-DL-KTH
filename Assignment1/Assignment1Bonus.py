@@ -113,6 +113,7 @@ def compute_grads_num_slow(X, Y, P, W, b, lmbda, h):
 
     return [grad_W, grad_b]
 
+
 # %% [markdown]
 # ## Exercices
 #
@@ -124,8 +125,6 @@ def compute_grads_num_slow(X, Y, P, W, b, lmbda, h):
 #
 
 # %%
-
-
 def load_data(filename):
     """ Read the data from the file """
     data = load_batch(filename)
@@ -438,7 +437,7 @@ for lmbda in lmbda_list:
     for n_batch in n_batch_list:
         for eta in eta_list:
             W, b = initialize_parameters(Y_train.shape[0], X_train.shape[0])
-            W, b, costs_train, costs_val, losses_train, losses_val, accuracies_train, accuracies_val = mini_batch_gd(
+            W, b, losses_train, losses_val, losses_train, losses_val, accuracies_train, accuracies_val = mini_batch_gd(
                 X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, lmbda=lmbda, n_batch=n_batch, n_epochs=n_epochs, eta=eta, verbose=False)
             accuracy = compute_accuracy(X_test, y_test, W, b)
             print("Hyperparameters: lambda=", lmbda, ", n_batch=", n_batch,
@@ -577,14 +576,104 @@ def evaluate_classifier_sigmoid(X, W, b):
     return sigmoid(W @ X + b)
 
 
-def multi_binary_cross_entropy(Y, P):
+def multi_binary_cross_entropy(X, Y, W, b):
     """ Compute the multi binary cross entropy """
-    return -np.sum(Y * np.log(P) + (1 - Y) * np.log(1 - P), axis=1) / Y.shape[0]
+    P = evaluate_classifier_sigmoid(X, W, b)
+    l = -np.sum(Y * np.log(P) + (1 - Y) * np.log(1 - P), axis=1)
+    return np.mean(l)
 
 
 def compute_gradients_multi_binary_cross_entropy(X, Y, P):
     """ Compute the gradients of the multi binary cross entropy """
-    return (P - Y) @ X.T / Y.shape[0], np.sum(P-Y, axis=1, keepdims=True) / Y.shape[0]
+    K = Y.shape[0]
+    return (P - Y) @ X.T / K, np.sum(P - Y, axis=1).reshape(-1, 1) / K
+
+
+def compute_grads_num_bce(X, Y, W, b, h):
+    """ Converted from matlab code """
+    no = W.shape[0]
+    d = X.shape[0]
+
+    grad_W = np.zeros(W.shape)
+    grad_b = np.zeros((no, 1))
+
+    c = multi_binary_cross_entropy(X, Y, W, b)
+
+    for i in range(len(b)):
+        b_try = np.array(b)
+        b_try[i] += h
+        c2 = multi_binary_cross_entropy(X, Y, W, b_try)
+        grad_b[i] = (c2 - c) / h
+
+    for i in range(W.shape[0]):
+        for j in range(W.shape[1]):
+            W_try = np.array(W)
+            W_try[i, j] += h
+            c2 = multi_binary_cross_entropy(X, Y, W_try, b)
+            grad_W[i, j] = (c2 - c) / h
+
+    return [grad_W, grad_b]
+
+
+def compute_grads_num_slow_bce(X, Y, W, b, h):
+    """ Converted from matlab code """
+    no = W.shape[0]
+    d = X.shape[0]
+
+    grad_W = np.zeros(W.shape)
+    grad_b = np.zeros((no, 1))
+
+    for i in range(len(b)):
+        b_try = np.array(b)
+        b_try[i] -= h
+        c1 = multi_binary_cross_entropy(X, Y, W, b_try)
+
+        b_try = np.array(b)
+        b_try[i] += h
+        c2 = multi_binary_cross_entropy(X, Y, W, b_try)
+
+        grad_b[i] = (c2 - c1) / (2 * h)
+
+    for i in range(W.shape[0]):
+        for j in range(W.shape[1]):
+            W_try = np.array(W)
+            W_try[i, j] -= h
+            c1 = multi_binary_cross_entropy(X, Y, W_try, b)
+
+            W_try = np.array(W)
+            W_try[i, j] += h
+            c2 = multi_binary_cross_entropy(X, Y, W_try, b)
+
+            grad_W[i, j] = (c2 - c1) / (2 * h)
+
+    return [grad_W, grad_b]
+
+
+# %%
+# Test the gradients
+X, Y, y = load_data('data_batch_1')
+X_train, Y_train, y_train, X_val, Y_val, y_val = split_data(
+    X, Y, y, (X.shape[1] - 1000)/X.shape[1])
+n = 30
+X_train = X_train[:, :n]
+Y_train = Y_train[:, :n]
+y_train = y_train[:n]
+X_train, X_val, X_test = mean_std_normalization(X_train, X_val, X_test)
+W, b = initialize_parameters(Y_train.shape[0], X_train.shape[0])
+P = evaluate_classifier_sigmoid(X_train, W, b)
+grad_W, grad_b = compute_gradients_multi_binary_cross_entropy(
+    X_train, Y_train, P)
+grad_W_num, grad_b_num = compute_grads_num_bce(X_train, Y_train, W, b, 1e-6)
+grad_W_num_slow, grad_b_num_slow = compute_grads_num_slow_bce(
+    X_train, Y_train, W, b, 1e-6)
+error_W = compute_relative_error(grad_W, grad_W_num)
+error_b = compute_relative_error(grad_b, grad_b_num)
+error_W_slow = compute_relative_error(grad_W, grad_W_num_slow)
+error_b_slow = compute_relative_error(grad_b, grad_b_num_slow)
+print("Error W: ", error_W)
+print("Error b: ", error_b)
+print("Error W slow: ", error_W_slow)
+print("Error b slow: ", error_b_slow)
 
 # %%
 
@@ -592,7 +681,7 @@ def compute_gradients_multi_binary_cross_entropy(X, Y, P):
 def mini_batch_gd_sigmoid(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, n_batch=200, n_epochs=50, eta=.001, verbose=True):
     """ Implement the mini-batch gradient descent algorithm """
     n = X_train.shape[1]
-    costs_train, costs_val = [], []
+    losses_train, losses_val = [], []
     accuracies_train, accuracies_val = [], []
     for epoch in range(n_epochs):
         # Shuffle the data
@@ -608,19 +697,22 @@ def mini_batch_gd_sigmoid(X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, 
                 X_batch, Y_batch, P_batch)
             W -= eta * grad_W
             b -= eta * grad_b
-        losses_train.append(multi_binary_cross_entropy(Y_train, evaluate_classifier_sigmoid(
-            X_train, W, b)))
-        losses_val.append(multi_binary_cross_entropy(Y_val, evaluate_classifier_sigmoid(
-            X_val, W, b)))
+        losses_train.append(multi_binary_cross_entropy(X_train, Y_train, W, b))
+        losses_val.append(multi_binary_cross_entropy(X_val, Y_val, W, b))
         accuracies_train.append(compute_accuracy(X_train, y_train, W, b))
         accuracies_val.append(compute_accuracy(X_val, y_val, W, b))
         if verbose:
-            print(f"Epoch {epoch + 1}/{n_epochs}: Cost train: {costs_train[-1]:.4f}, Cost val: {
-                costs_val[-1]:.4f}, Accuracy train: {accuracies_train[-1]:.4f}, Accuracy val: {accuracies_val[-1]:.4f}")
+            print(f"Epoch {epoch + 1}/{n_epochs}: Loss train: {losses_train[-1]:.4f}, Loss val: {
+                losses_val[-1]:.4f}, Accuracy train: {accuracies_train[-1]:.4f}, Accuracy val: {accuracies_val[-1]:.4f}")
     return W, b, losses_train, losses_val, accuracies_train, accuracies_val
 
 
 # %%
+X, Y, y, X_test, Y_test, y_test = load_all_data()
+X_train, Y_train, y_train, X_val, Y_val, y_val = split_data(
+    X, Y, y, (X.shape[1] - 1000)/X.shape[1])
+X_train, X_val, X_test = mean_std_normalization(X_train, X_val, X_test)
+
 W, b = initialize_parameters(Y_train.shape[0], X_train.shape[0])
 W, b, losses_train, losses_val, accuracies_train, accuracies_val = mini_batch_gd_sigmoid(
     X_train, Y_train, y_train, X_val, Y_val, y_val, W, b, n_batch=200, n_epochs=50, eta=.001, verbose=False)
