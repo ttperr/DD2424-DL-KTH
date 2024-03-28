@@ -17,7 +17,7 @@ import numpy as np
 import math
 import time
 import os
-import tqdm
+from tqdm.notebook import trange
 
 np.random.seed(42)
 # Fix torch seed
@@ -63,8 +63,16 @@ def compute_relative_error(grad_analytical, grad_numerical, eps=1e-9):
 # %%
 
 
-class Classifier():
-    def __init__(self, x_train, x_val, x_test, y_train, y_val, y_test, y_1d_train, y_1d_val, y_1d_test, eta=0.001, lambd=0.0):
+def compute_eta(eta_min, eta_max, t, n_s):
+    t = t % (2 * n_s)
+    if t < n_s:
+        return eta_min + t / n_s * (eta_max - eta_min)
+    else:
+        return eta_max - (t - n_s) / n_s * (eta_max - eta_min)
+
+
+class Classifier:
+    def __init__(self, x_train, x_val, x_test, y_train, y_val, y_test, y_1d_train, y_1d_val, y_1d_test, eta=0.001, lambda_=0.0):
         self.x_train = torch.tensor(x_train, dtype=torch.float64)
         self.x_val = torch.tensor(x_val, dtype=torch.float64)
         self.x_test = torch.tensor(x_test, dtype=torch.float64)
@@ -76,10 +84,14 @@ class Classifier():
         self.y_1d_test = torch.tensor(y_1d_test, dtype=torch.float64)
 
         self.eta = eta
-        self.lambd = lambd
+        self.lambda_ = lambda_
 
         self.W = []
         self.b = []
+        self.z1 = None
+        self.h = None
+        self.z2 = None
+        self.p = None
 
         self.costs_train = []
         self.costs_val = []
@@ -111,8 +123,8 @@ class Classifier():
         self.y_1d_test = self.y_1d_test[:n]
 
     def preprocess(self):
-        mean_X = torch.mean(self.x_train, axis=1, keepdim=True)
-        std_X = torch.std(self.x_train, axis=1, keepdim=True)
+        mean_X = torch.mean(self.x_train, dim=1, keepdim=True)
+        std_X = torch.std(self.x_train, dim=1, keepdim=True)
         self.x_train = (self.x_train - mean_X) / std_X
         self.x_val = (self.x_val - mean_X) / std_X
         self.x_test = (self.x_test - mean_X) / std_X
@@ -144,25 +156,25 @@ class Classifier():
         m = x.shape[1]
         self.forward(x, W1, b1, W2, b2)
         loss = -torch.sum(y * torch.log(self.p)) / m
-        reg = self.lambd * (torch.sum(W1 ** 2) + torch.sum(W2 ** 2))
+        reg = self.lambda_ * (torch.sum(W1 ** 2) + torch.sum(W2 ** 2))
         return loss + reg, loss
 
     def cost_grad(self, x, y):
         m = x.shape[1]
         self.forward(x, self.W[0], self.b[0], self.W[1], self.b[1])
         dZ2 = self.p - y
-        dW2 = dZ2 @ self.h.T / m + 2 * self.lambd * self.W[1]
-        db2 = torch.sum(dZ2, axis=1, keepdim=True) / m
+        dW2 = dZ2 @ self.h.T / m + 2 * self.lambda_ * self.W[1]
+        db2 = torch.sum(dZ2, dim=1, keepdim=True) / m
         dH = self.W[1].T @ dZ2
         dZ1 = dH * (self.z1 > 0)
-        dW1 = dZ1 @ x.T / m + 2 * self.lambd * self.W[0]
-        db1 = torch.sum(dZ1, axis=1, keepdim=True) / m
+        dW1 = dZ1 @ x.T / m + 2 * self.lambda_ * self.W[0]
+        db1 = torch.sum(dZ1, dim=1, keepdim=True) / m
         return dW1, db1, dW2, db2
 
     def accuracy(self, x, y):
         self.forward(x, self.W[0], self.b[0], self.W[1], self.b[1])
-        correct = torch.sum(torch.argmax(y, axis=0) ==
-                            torch.argmax(self.p, axis=0))
+        correct = torch.sum(torch.argmax(y, dim=0) ==
+                            torch.argmax(self.p, dim=0))
         return correct.item() / x.shape[1]
 
     def compute_grads_num(self, X, Y, W, b, h):
@@ -239,17 +251,10 @@ class Classifier():
         self.W[1].grad.zero_()
         self.b[1].grad.zero_()
 
-    def compute_eta(self, eta_min, eta_max, t, n_s):
-        t = t % (2 * n_s)
-        if t < n_s:
-            return eta_min + t / n_s * (eta_max - eta_min)
-        else:
-            return eta_max - (t - n_s) / n_s * (eta_max - eta_min)
-
     def mini_batch_gd(self, batch_size, n_epochs):
         n = self.x_train.shape[1]
         n_batch = math.ceil(n / batch_size)
-        p_bar = tqdm.trange(n_epochs)
+        p_bar = trange(n_epochs)
         for epoch in p_bar:
             shuffle_idx = torch.randperm(n)
             x_train = self.x_train[:, shuffle_idx]
@@ -285,10 +290,10 @@ class Classifier():
         n_batch = math.ceil(n / batch_size)
         n_epoch = math.ceil(2 * n_s / n_batch)
         t = 0
-        p_bar = tqdm.trange(n_cycles, position=1, leave=True)
+        p_bar = trange(n_cycles)
         for cycle in p_bar:
             p_bar.set_description(f'Cycle: {cycle + 1}/{n_cycles}')
-            p_bar2 = tqdm.trange(n_epoch, position=0, leave=True)
+            p_bar2 = trange(n_epoch, leave=False)
             for epoch in p_bar2:
                 shuffle_idx = torch.randperm(n)
                 x_train = self.x_train[:, shuffle_idx]
@@ -299,7 +304,7 @@ class Classifier():
                     x_batch = x_train[:, start:end]
                     y_batch = y_train[:, start:end]
                     dW1, db1, dW2, db2 = self.cost_grad(x_batch, y_batch)
-                    eta = self.compute_eta(1e-5, 1e-1, t, n_s)
+                    eta = compute_eta(1e-5, 1e-1, t, n_s)
                     with torch.no_grad():
                         self.W[0] -= eta * dW1
                         self.b[0] -= eta * db1
@@ -364,7 +369,7 @@ n = 20
 dim = 50
 
 classifier = Classifier(X_train, X_val, X_test, Y_train,
-                        Y_val, Y_test, y_train, y_val, y_test, eta=0.001, lambd=0.0)
+                        Y_val, Y_test, y_train, y_val, y_test, eta=0.001, lambda_=0.0)
 classifier.keep_n_data(n)
 classifier.keep_n_dim(dim)
 classifier.preprocess()
@@ -376,7 +381,7 @@ n = 100
 hidden_size = 50
 
 classifier = Classifier(X_train, X_val, X_test, Y_train,
-                        Y_val, Y_test, y_train, y_val, y_test, eta=0.005, lambd=0.0)
+                        Y_val, Y_test, y_train, y_val, y_test, eta=0.005, lambda_=0.0)
 classifier.keep_n_data(n)
 classifier.preprocess()
 classifier.initialize_weights(hidden_size)
@@ -391,7 +396,7 @@ classifier.plot_costs_acc()
 
 # %%
 classifier = Classifier(X_train, X_val, X_test, Y_train,
-                        Y_val, Y_test, y_train, y_val, y_test, eta=0.005, lambd=.01)
+                        Y_val, Y_test, y_train, y_val, y_test, eta=0.005, lambda_=.01)
 classifier.preprocess()
 classifier.initialize_weights(hidden_size=50)
 classifier.mini_batch_gd_cyclic(batch_size=100, n_s=500, n_cycles=1)
@@ -404,10 +409,12 @@ classifier.plot_costs_acc()
 
 # %%
 classifier = Classifier(X_train, X_val, X_test, Y_train,
-                        Y_val, Y_test, y_train, y_val, y_test, eta=0.005, lambd=.01)
+                        Y_val, Y_test, y_train, y_val, y_test, eta=0.005, lambda_=.01)
 classifier.preprocess()
 classifier.initialize_weights(hidden_size=50)
 classifier.mini_batch_gd_cyclic(batch_size=100, n_s=800, n_cycles=3)
 
 # %%
 classifier.plot_costs_acc()
+
+# %%
