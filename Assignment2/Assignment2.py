@@ -15,13 +15,8 @@ import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-import time
 import os
 from tqdm.notebook import trange
-
-np.random.seed(42)
-# Fix torch seed
-torch.manual_seed(0)
 
 DATASET_PATH = '../Dataset/'
 
@@ -46,13 +41,26 @@ def load_data(filename):
         Y[y[i], i] = 1
     return X, Y, y
 
+
+def load_all_data():
+    """ Load all the data """
+    X, Y, y = load_data('data_batch_1')
+    for i in range(2, 6):
+        X_i, Y_i, y_i = load_data(f'data_batch_{i}')
+        X = np.concatenate((X, X_i), axis=1)
+        Y = np.concatenate((Y, Y_i), axis=1)
+        y = np.concatenate((y, y_i))
+    X_test_, Y_test_, y_test_ = load_data('test_batch')
+    return X, Y, y, X_test_, Y_test_, y_test_
+
 # %%
 
 
 def compute_relative_error(grad_analytical, grad_numerical, eps=1e-9):
     """ Compute the relative error between the analytical and numerical gradients """
     return torch.max(
-        torch.abs(grad_analytical - grad_numerical) / torch.clamp(torch.abs(grad_analytical) + torch.abs(grad_numerical) + eps, min=eps))
+        torch.abs(grad_analytical - grad_numerical) / torch.clamp(
+            torch.abs(grad_analytical) + torch.abs(grad_numerical) + eps, min=eps))
 
 # %% [markdown]
 # ## Exercises
@@ -72,7 +80,8 @@ def compute_eta(eta_min, eta_max, t, n_s):
 
 
 class Classifier:
-    def __init__(self, x_train, x_val, x_test, y_train, y_val, y_test, y_1d_train, y_1d_val, y_1d_test, eta=0.001, lambda_=0.0):
+    def __init__(self, x_train, x_val, x_test, y_train, y_val, y_test, y_1d_train, y_1d_val, y_1d_test, eta=0.001,
+                 lambda_=0.0):
         self.x_train = torch.tensor(x_train, dtype=torch.float64)
         self.x_val = torch.tensor(x_val, dtype=torch.float64)
         self.x_test = torch.tensor(x_test, dtype=torch.float64)
@@ -285,15 +294,16 @@ class Classifier:
             p_bar.set_description(f'Cost Train: {cost_train.item():.4f}, Cost Val: {
                                   cost_val.item():.4f}, Epoch: {epoch + 1}/{n_epochs}')
 
-    def mini_batch_gd_cyclic(self, batch_size, n_s, n_cycles):
+    def mini_batch_gd_cyclic(self, batch_size, n_s, n_cycles, pbar=True):
         n = self.x_train.shape[1]
         n_batch = math.ceil(n / batch_size)
         n_epoch = math.ceil(2 * n_s / n_batch)
         t = 0
-        p_bar = trange(n_cycles)
+        p_bar = trange(n_cycles) if pbar else range(n_cycles)
         for cycle in p_bar:
-            p_bar.set_description(f'Cycle: {cycle + 1}/{n_cycles}')
-            p_bar2 = trange(n_epoch, leave=False)
+            p_bar.set_description(
+                f'Cycle: {cycle + 1}/{n_cycles}') if pbar else None
+            p_bar2 = trange(n_epoch, leave=False) if pbar else range(n_epoch)
             for epoch in p_bar2:
                 shuffle_idx = torch.randperm(n)
                 x_train = self.x_train[:, shuffle_idx]
@@ -324,7 +334,7 @@ class Classifier:
                 self.accuracies_train.append(accuracy_train)
                 self.accuracies_val.append(accuracy_val)
                 p_bar2.set_description(f'Cost Train: {cost_train.item():.4f}, Cost Val: {
-                    cost_val.item():.4f}, Epoch: {epoch + 1}/{n_epoch}')
+                                       cost_val.item():.4f}, Epoch: {epoch + 1}/{n_epoch}') if pbar else None
 
     def plot_costs_acc(self):
         fig, ax = plt.subplots(1, 3, figsize=(15, 5))
@@ -406,6 +416,7 @@ classifier.plot_costs_acc()
 
 # %% [markdown]
 # ## Exercice 4
+#
 
 # %%
 classifier = Classifier(X_train, X_val, X_test, Y_train,
@@ -417,4 +428,150 @@ classifier.mini_batch_gd_cyclic(batch_size=100, n_s=800, n_cycles=3)
 # %%
 classifier.plot_costs_acc()
 
+# %% [markdown]
+# ### Coarse-to-fine random search
+#
+
 # %%
+X, Y, y, X_test, Y_test, y_test = load_all_data()
+
+X_train = X[:, :45000]
+Y_train = Y[:, :45000]
+y_train = y[:45000]
+X_val = X[:, 45000:]
+Y_val = Y[:, 45000:]
+y_val = y[45000:]
+
+print('Train:', X_train.shape, Y_train.shape, y_train.shape)
+print('Validation:', X_val.shape, Y_val.shape, y_val.shape)
+
+# %%
+
+
+def random_search(n_iter, n_cycles, batch_size, l_min, l_max):
+    n_batch = math.ceil(X_train.shape[1] / batch_size)
+    n_s = 2 * math.floor(X_train.shape[1] / n_batch)
+    accuracies = []
+    lambdas = []
+    pbar = trange(n_iter)
+    for i in pbar:
+        l = l_min + torch.rand(1) * (l_max - l_min)
+        lambda_ = 10 ** l
+        classifier = Classifier(X_train, X_val, X_test, Y_train,
+                                Y_val, Y_test, y_train, y_val, y_test, eta=None, lambda_=lambda_)
+        classifier.preprocess()
+        classifier.initialize_weights(hidden_size=50)
+        classifier.mini_batch_gd_cyclic(
+            batch_size=batch_size, n_s=n_s, n_cycles=n_cycles, pbar=False)
+        accuracies.append(classifier.accuracy(
+            classifier.x_val, classifier.y_val))
+        lambdas.append(lambda_)
+        pbar.set_description(f'Iter: {i + 1}/{n_iter}')
+    return accuracies, lambdas
+
+# %% [markdown]
+# #### Coarse search
+
+
+# %%
+accuracies, lambdas = random_search(20, 2, 100, -5, -1)
+# Save the accuracies and lambdas in a file
+torch.save(accuracies, 'tensors/accuracies_coarse.pth')
+torch.save(lambdas, 'tensors/lambdas_coarse.pth')
+# Best lambda
+best_lambda = lambdas[np.argmax(accuracies)]
+print('Best lambda:', best_lambda, 'with accuracy:', max(accuracies))
+
+# %%
+# Load the accuracies and lambdas
+accuracies = torch.load('tensors/accuracies_coarse.pth')
+lambdas = torch.load('tensors/lambdas_coarse.pth')
+
+# Ranks the lambdas based on the accuracies descending
+idx = np.argsort(accuracies)[::-1]
+lambdas = [lambdas[i] for i in idx]
+accuracies = [accuracies[i] for i in idx]
+
+# Print the top 5 lambdas
+print('Top 5 lambdas:')
+for i in range(5):
+    print(f'Lambda: {lambdas[i].item():.4}, Accuracy: {accuracies[i]}')
+
+# %% [markdown]
+# #### Fine search
+
+# %%
+# Get the l_min and l_max from the 5 best lambdas
+lambda_min = min(lambdas[:5])
+lambda_max = max(lambdas[:5])
+print('Lambda min:', lambda_min)
+print('Lambda max:', lambda_max)
+l_min = math.log10(lambda_min)
+l_max = math.log10(lambda_max)
+
+accuracies, lambdas = random_search(20, 2, 100, l_min, l_max)
+# Save the accuracies and lambdas in a file
+torch.save(accuracies, 'tensors/accuracies_fine.pth')
+torch.save(lambdas, 'tensors/lambdas_fine.pth')
+# Best lambda
+best_lambda = lambdas[np.argmax(accuracies)]
+print('Best lambda:', best_lambda, 'with accuracy:', max(accuracies))
+
+
+# %%
+# Load the accuracies and lambdas
+accuracies = torch.load('tensors/accuracies_fine.pth')
+lambdas = torch.load('tensors/lambdas_fine.pth')
+
+# Ranks the lambdas based on the accuracies descending
+idx = np.argsort(accuracies)[::-1]
+lambdas = [lambdas[i] for i in idx]
+accuracies = [accuracies[i] for i in idx]
+
+# Print the top 5 lambdas
+print('Top 5 lambdas:')
+for i in range(5):
+    print(f'Lambda: {lambdas[i].item():.4}, Accuracy: {accuracies[i]}')
+
+
+# %%
+# Get the l_min and l_max from the 5 best lambdas
+lambda_min = min(lambdas[:5])
+lambda_max = max(lambdas[:5])
+print('Lambda min:', lambda_min)
+print('Lambda max:', lambda_max)
+l_min = math.log10(lambda_min)
+l_max = math.log10(lambda_max)
+
+accuracies, lambdas = random_search(20, 2, 100, l_min, l_max)
+# Save the accuracies and lambdas in a file
+torch.save(accuracies, 'tensors/accuracies_fine_fine.pth')
+torch.save(lambdas, 'tensors/lambdas_fine_fine.pth')
+# Best lambda
+best_lambda = lambdas[np.argmax(accuracies)]
+print('Best lambda:', best_lambda, 'with accuracy:', max(accuracies))
+
+
+# %% [markdown]
+# #### Final Performance
+
+# %%
+X, Y, y, X_test, Y_test, y_test = load_all_data()
+
+X_train = X[:, :49000]
+Y_train = Y[:, :49000]
+y_train = y[:49000]
+X_val = X[:, 49000:]
+Y_val = Y[:, 49000:]
+y_val = y[49000:]
+
+classifier = Classifier(X_train, X_val, X_test, Y_train,
+                        Y_val, Y_test, y_train, y_val, y_test, eta=None, lambda_=best_lambda)
+classifier.preprocess()
+classifier.initialize_weights(hidden_size=50)
+n_batch = math.ceil(X_train.shape[1] / 100)
+n_s = 2 * math.floor(X_train.shape[1] / n_batch) * 1.5
+classifier.mini_batch_gd_cyclic(batch_size=100, n_s=n_s, n_cycles=8)
+
+# %%
+classifier.plot_costs_acc()

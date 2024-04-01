@@ -1,0 +1,73 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{float} % Required for controlling the position of images
+
+\title{Assignment 2 - DD2424 - One Layer Network}
+\author{Tristan Perrot}
+\date{April 2024}
+
+
+\begin{document}
+
+\maketitle
+\begin{center}
+    \includegraphics[scale=0.25]{images/KTH_logo_RGB_svart.png}
+\end{center}
+
+\section{Exercise 1}
+
+For this assignment. I decided to create a python object that would represent our classifier. I made this choice because it would simplify the creation of each different classifier and would allow me to easily test different configurations.
+\begin{quote}
+    \textit{How I checked my analytic gradient computations?}
+\end{quote}
+After doing the math to compute the gradient and checked it with the given formula on the slides. I decided to implement the gradient computation in the python object. I then compared the results of the analytic gradient with the numerical gradient and the \textbf{PyTorch} gradient.
+I use the \textbf{relative error} to compare the gradients for every weights and biases. I get a relative error of $10^{-14}$ for torch vs analytical. However, I get a relative error of $10^{-4}$ for analytical vs numerical and torch vs numerical. The last relative error can be explained because of the numerical approximation of the gradient.
+
+\section{Exercise 2}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{Result_Pics/ex2.png}
+    \caption{Small training with no regularization. It definitely overfits the data.}
+    \label{fig:ex2}
+\end{figure}
+
+Here, just to see if the classifier works, I trained it on a small dataset with no regularization. As we can see in figure \ref{fig:ex2}, the classifier overfits the data. The training loss goes to zero, but the validation loss increases. This is a clear sign of overfitting. I get these accuracies:
+\begin{itemize}
+    \item Training accuracy: 100\%
+    \item Validation accuracy: 21\%
+    \item Test accuracy: 14\%
+\end{itemize}
+
+\section{Exercise 3}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{Result_Pics/ex3.png}
+    \caption{\textbf{Training curves (cost, loss, accuracy) for one cycle of training.} The hyper-parameter settings
+        of the training algorithm are \texttt{eta min = 1e-5}, \texttt{eta max = 1e-1}, \texttt{lambda = .01}, \texttt{n s = 500} and \texttt{batch size = 100}.}
+    \label{fig:ex3}
+\end{figure}
+
+Now that the classifier works. I trained the classifier on the CIFAR-10 dataset with cyclical learning rates. Now, the learning rate is not constant but varies between a minimum and a maximum value.
+
+\section{Exercise 4}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{Result_Pics/ex4.png}
+    \caption{\textbf{Training curves (cost, loss, accuracy) for three cycles of training.} The hyper-parameter settings
+        of the training algorithm are \texttt{eta min = 1e-5}, \texttt{eta max = 1e-1}, \texttt{lambda = .01}, \texttt{n s = 800} and \texttt{batch size = 100}.}
+    \label{fig:ex4}
+\end{figure}
+
+Now that the cyclical learning rate works, I trained the classifier on the CIFAR-10 dataset with three cycles of training. As we can see in figure \ref{fig:ex4}, the training loss decreases and the validation loss decreases as well and we can see the cycles. I obtain these accuracies:
+\begin{itemize}
+    \item Training accuracy: 71.78\%
+    \item Validation accuracy: 46.61\%
+    \item Test accuracy: 48.09\%
+\end{itemize}
+
+\subsection{Coarse to fine lambda search}
+
+\end{document}
