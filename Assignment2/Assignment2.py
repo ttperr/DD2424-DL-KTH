@@ -556,6 +556,16 @@ print('Best lambda:', best_lambda, 'with accuracy:', max(accuracies))
 # #### Final Performance
 
 # %%
+accuracies = torch.load('tensors/accuracies_fine_fine.pth')
+lambdas = torch.load('tensors/lambdas_fine_fine.pth')
+
+# Ranks the lambdas based on the accuracies descending
+idx = np.argsort(accuracies)[::-1]
+lambdas = [lambdas[i] for i in idx]
+accuracies = [accuracies[i] for i in idx]
+
+best_lambda = lambdas[0]
+
 X, Y, y, X_test, Y_test, y_test = load_all_data()
 
 X_train = X[:, :49000]
@@ -570,8 +580,9 @@ classifier = Classifier(X_train, X_val, X_test, Y_train,
 classifier.preprocess()
 classifier.initialize_weights(hidden_size=50)
 n_batch = math.ceil(X_train.shape[1] / 100)
-n_s = 2 * math.floor(X_train.shape[1] / n_batch) * 1.5
-classifier.mini_batch_gd_cyclic(batch_size=100, n_s=n_s, n_cycles=8)
+n_s = 2 * math.floor(X_train.shape[1] / n_batch) * 3
+print(n_s)
+classifier.mini_batch_gd_cyclic(batch_size=200, n_s=n_s, n_cycles=5)
 
 # %%
 classifier.plot_costs_acc()

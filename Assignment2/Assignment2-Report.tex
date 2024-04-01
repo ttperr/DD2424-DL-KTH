@@ -70,4 +70,41 @@ Now that the cyclical learning rate works, I trained the classifier on the CIFAR
 
 \subsection{Coarse to fine lambda search}
 
+\subsubsection{Coarse search}
+For the coarse search, I used the \texttt{l min = -5} and \texttt{l max = -1} (so with \texttt{lambda} between \texttt{$10^{-l min}$} and \texttt{$10^{-l max}$}) and I used 20 values between these two values randomly chosen. I trained the classifier for 2 cycles. I obtain this top 3 results:
+\begin{itemize}
+    \item Lambda: 8.887e-05, Accuracy: 47.3\%
+    \item Lambda: 0.0007362, Accuracy: 46.8\%
+    \item Lambda: 0.0008308, Accuracy: 46.4\%
+\end{itemize}
+
+\subsubsection{Fine search}
+For the fine search, I used the worst lambda and the best lambda from the top 5 results of the coarse search. I used 20 values between these two values randomly chosen. I trained the classifier for 2 cycles. I obtain this top 3 results:
+\begin{itemize}
+    \item Lambda: 0.0001349, Accuracy: 47.1\%
+    \item Lambda: 4.93e-05, Accuracy: 45.7\%
+    \item Lambda: 0.0001497, Accuracy: 45.7\%
+\end{itemize}
+
+\subsection{Final test accuracy}
+After that I have redone a fine search with the same method as before but with the best lambdas from the fine search. I obtain the best lambda: 0.0003 with an accuracy of 48.5\% on the validation set.
+Then, with this parameter, a \texttt{n s = 600}, 5 cycles of training and a batch size of 200.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=\linewidth]{Result_Pics/final-perf.png}
+    \caption{\textbf{Training curves (cost, loss, accuracy) for eight cycles of training.} After the coarse and fine search.}
+    \label{fig:final}
+\end{figure}
+
+I obtain these accuracies:
+\begin{itemize}
+    \item Train Accuracy: 63.12\%
+    \item Validation Accuracy: 52.2\%
+    \item Test Accuracy: 51.49\%
+\end{itemize}
+
+\section{Conclusion}
+In conclusion, I have implemented a two layer neural network with a cyclical learning rate and a regularization term. I have trained this classifier on the CIFAR-10 dataset and I have done a coarse and fine search for the regularization term. I have obtained a test accuracy of 51.49\% which is not bad for a two layer neural network.
+
 \end{document}
