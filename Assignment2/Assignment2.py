@@ -10,12 +10,9 @@
 
 # %%
 import torch
-import torchvision
-import torchvision.transforms as transforms
 import matplotlib.pyplot as plt
 import numpy as np
 import math
-import os
 from tqdm.notebook import trange
 
 DATASET_PATH = '../Dataset/'
@@ -366,7 +363,7 @@ class Classifier:
         plt.show()
 
 # %% [markdown]
-# ## Exercice 1 & 2
+# ## Exercise 1 & 2
 #
 
 
@@ -401,7 +398,7 @@ classifier.mini_batch_gd(batch_size=50, n_epochs=200)
 classifier.plot_costs_acc()
 
 # %% [markdown]
-# ## Exercice 3
+# ## Exercise 3
 #
 
 # %%
@@ -415,7 +412,7 @@ classifier.mini_batch_gd_cyclic(batch_size=100, n_s=500, n_cycles=1)
 classifier.plot_costs_acc()
 
 # %% [markdown]
-# ## Exercice 4
+# ## Exercise 4
 #
 
 # %%
