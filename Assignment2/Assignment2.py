@@ -140,15 +140,13 @@ class Classifier:
         outputs = self.y_train.shape[0]
 
         W1 = torch.randn(hidden_size, features,
-                         dtype=self.x_train.dtype) / math.sqrt(features)
-        b1 = torch.zeros(hidden_size, 1, dtype=self.x_train.dtype)
+                         dtype=self.x_train.dtype, requires_grad=True) / math.sqrt(features)
         W2 = torch.randn(outputs, hidden_size,
-                         dtype=self.x_train.dtype) / math.sqrt(hidden_size)
-        b2 = torch.zeros(outputs, 1, dtype=self.x_train.dtype)
-        W1.requires_grad = True
-        b1.requires_grad = True
-        W2.requires_grad = True
-        b2.requires_grad = True
+                         dtype=self.x_train.dtype, requires_grad=True) / math.sqrt(hidden_size)
+        b1 = torch.zeros(
+            hidden_size, 1, dtype=self.x_train.dtype, requires_grad=True)
+        b2 = torch.zeros(
+            outputs, 1, dtype=self.x_train.dtype, requires_grad=True)
         self.W = [W1, W2]
         self.b = [b1, b2]
 
@@ -225,6 +223,10 @@ class Classifier:
 
         cost, _ = self.cost(self.x_train, self.y_train,
                             self.W[0], self.b[0], self.W[1], self.b[1])
+        self.W[0].retain_grad()
+        self.b[0].retain_grad()
+        self.W[1].retain_grad()
+        self.b[1].retain_grad()
         cost.backward()
         grad_W1 = self.W[0].grad
         grad_b1 = self.b[0].grad
