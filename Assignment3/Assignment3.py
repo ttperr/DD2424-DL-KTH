@@ -920,6 +920,12 @@ accuracies = [accuracies[i] for i in idx]
 
 best_lambda = lambdas[0]
 
+# Print the top 5 lambdas
+print('Top 5 lambdas:')
+for i in range(5):
+    print(f'Lambda: {lambdas[i].item():.4}, Accuracy: {accuracies[i]}')
+
+# %%
 X, Y, y, X_test, Y_test, y_test = load_all_data()
 
 X_train = X[:, :45000]
@@ -972,7 +978,9 @@ batch_size = X_train.shape[1] // n_batch
 n_s = 5 * batch_size
 
 
-test_accuracies = []
+final_test_accuracies = []
+final_train_losses = []
+final_val_losses = []
 hidden_size = []
 
 for sig in [1e-1, 1e-3, 1e-4]:
@@ -988,17 +996,45 @@ for sig in [1e-1, 1e-3, 1e-4]:
         batch_size=batch_size, n_s=n_s, n_cycles=2, pbar=False)
     classifierBN.mini_batch_gd_BN_cyclic(
         batch_size=batch_size, n_s=n_s, n_cycles=2, pbar=False)
-    test_accuracies.append((classifier.accuracy(
+    final_train_losses.append(
+        (classifier.losses_train[-1], classifierBN.losses_train[-1]))
+    final_val_losses.append(
+        (classifier.losses_val[-1], classifierBN.losses_val[-1]))
+    final_test_accuracies.append((classifier.accuracy(
         classifier.x_test, classifier.y_test), classifierBN.accuracy(classifierBN.x_test, classifierBN.y_test)))
 
-plt.plot(test_accuracies)
-plt.legend(['Without BN', 'With BN'])
-plt.xticks(range(3), ['1e-1', '1e-3', '1e-4'])
-plt.ylabel('Accuracy')
-plt.xlabel('Sigma')
-plt.title('Test Accuracy vs Sigma')
-plt.grid()
+fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+ax[0].plot([1e-1, 1e-3, 1e-4], [t[0]
+           for t in final_train_losses], label='Without BN')
+ax[0].plot([1e-1, 1e-3, 1e-4], [t[1]
+           for t in final_train_losses], label='With BN')
+ax[0].set_title('Train Loss vs Sigma')
+ax[0].set_xlabel('Sigma')
+ax[0].set_ylabel('Train Loss')
+ax[0].legend()
+ax[0].grid()
+ax[1].plot([1e-1, 1e-3, 1e-4], [t[0]
+           for t in final_val_losses], label='Without BN')
+ax[1].plot([1e-1, 1e-3, 1e-4], [t[1]
+           for t in final_val_losses], label='With BN')
+ax[1].set_title('Validation Loss vs Sigma')
+ax[1].set_xlabel('Sigma')
+ax[1].set_ylabel('Validation Loss')
+ax[1].legend()
+ax[1].grid()
+ax[2].plot([1e-1, 1e-3, 1e-4], [t[0]
+           for t in final_test_accuracies], label='Without BN')
+ax[2].plot([1e-1, 1e-3, 1e-4], [t[1]
+           for t in final_test_accuracies], label='With BN')
+ax[2].set_title('Test Accuracy vs Sigma')
+ax[2].set_xlabel('Sigma')
+ax[2].set_ylabel('Test Accuracy')
+ax[2].legend()
+ax[2].grid()
+fig.tight_layout()
 plt.show()
 
 # %%
-print(test_accuracies)
+print(final_test_accuracies)
+print(final_train_losses)
+print(final_val_losses)
