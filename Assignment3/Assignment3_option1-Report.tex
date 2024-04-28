@@ -18,7 +18,7 @@
 
 After completing the code for the previous assignment, I have upgraded the code to support a K-layer network. The code is now able to train a K-layer network. This model is without batch normalization and to check whether the gradient computation was good or not I used the same tests as in the previous assignment. \\
 \textit{How I checked my analytic gradient computations with batch normalization?} \\
-As I did before, for the parameters of the network that are not in the batch normalization I computed numerically the gradient with the given function. Moreover, for the \texttt{gamma} and \texttt{beta} parameters of the batch normalization, I computed the gradient with the grad functionality of PyTorch. I compared the two gradients and they were the same. \\
+As I did before, for the parameters of the network that are not in the batch normalization I computed numerically the gradient with the given function. Moreover, for the \texttt{gamma} and \texttt{beta} parameters of the batch normalization, I computed the gradient with the grad functionality of PyTorch. I compared the two gradients and they were the same given the relative error (around $10^{-15}$ compared to autograd and $10^{-7}$ compared to numerical). \\
 
 \section*{3 layer network}
 
@@ -84,7 +84,7 @@ Here again we gain 1.74\% of accuracy with the lambda tuning which is really goo
 
 I tested the sensitivity to initialization for the 3-layer network with and without batch normalization by initializing the weights with gaussian distribution with mean 0 and standard deviation of 1e-1, 1e-3, 1e-4. I used \texttt{lambda=.005} for the 3-layer network. \\
 
-\begin{figure}
+\begin{figure}[H]
     \centering
     \includegraphics[width=\linewidth]{Result_Pics/sensitivity to initialization.png}
     \caption{Sensitivity to initialization}

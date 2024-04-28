@@ -241,8 +241,8 @@ class RNN:
             for key in self.grads.keys():
                 diff = torch.norm(self.grads[key] - vars(self)[key].grad)
                 rel_err = diff / \
-                    (torch.norm(self.grads[key]) +
-                     torch.norm(vars(self)[key].grad) + 1e-16)
+                    torch.max(torch.norm(
+                        self.grads[key]) + torch.norm(vars(self)[key].grad), torch.tensor(1e-16))
                 print(f"Relative error on {key}: {rel_err}")
 
     def plot_losses(self):

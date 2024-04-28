@@ -19,11 +19,11 @@
 
 After implementing forward pass and backward pass, I've checked the gradient computation by using the \texttt{autograd.grad} method of PyTorch. I've compared the gradients with the ones analytically computed and they were very close. The relative error was less than $10^{-7}$ for all the parameters:
 \begin{verbatim}
-Relative error on V: 2.5663803526754236e-08
-Relative error on c: 2.2815955347255112e-08
-Relative error on W: 3.914951918204679e-08
-Relative error on b: 3.6925428048562026e-08
-Relative error on U: 2.9062837469950864e-08
+Relative error on V: 3.21092130661782e-08
+Relative error on c: 2.154427392042635e-08
+Relative error on W: 4.962705801858647e-08
+Relative error on b: 4.1212210533103644e-08
+Relative error on U: 3.4753277589061327e-08
 \end{verbatim}
 These results show that the gradients are correctly computed.
 
